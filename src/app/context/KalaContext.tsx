@@ -52,6 +52,7 @@ export interface ClickEvent {
 
 interface KalaContextType {
   items: PrelovedItem[];
+  sellerItems: PrelovedItem[];
   currentUser: User | null;
   users: User[];
   clicksLog: ClickEvent[];
@@ -88,6 +89,7 @@ const INITIAL_USERS: User[] = [
 
 export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<PrelovedItem[]>([]);
+  const [sellerItems, setSellerItems] = useState<PrelovedItem[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [clicksLog, setClicksLog] = useState<ClickEvent[]>([]);
@@ -118,6 +120,19 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // 3. Fetch all seller items (including archived ones) for dashboard use
+  const fetchSellerItems = async (username: string) => {
+    try {
+      const res = await fetch(`/api/items?sellerUsername=${username}&includeArchived=true`);
+      if (res.ok) {
+        const data = await res.json();
+        setSellerItems(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch seller items:", error);
+    }
+  };
+
   useEffect(() => {
     fetchItems();
     
@@ -127,6 +142,9 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const parsedUser = JSON.parse(savedCurrentUser);
       setCurrentUser(parsedUser);
       fetchSellerSummary(parsedUser.id);
+      if (parsedUser.username) {
+        fetchSellerItems(parsedUser.username);
+      }
     }
   }, []);
 
@@ -143,6 +161,9 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(user);
         localStorage.setItem("kala_current_user", JSON.stringify(user));
         fetchSellerSummary(user.id);
+        if (user.username) {
+          fetchSellerItems(user.username);
+        }
         return true;
       }
       return false;
@@ -160,6 +181,7 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(user);
         localStorage.setItem("kala_current_user", JSON.stringify(user));
         setClicksLog([]);
+        setSellerItems([]);
       }
     } catch (e) {
       console.error("Google login mock failed:", e);
@@ -169,6 +191,7 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setCurrentUser(null);
     setClicksLog([]);
+    setSellerItems([]);
     localStorage.removeItem("kala_current_user");
   };
 
@@ -185,6 +208,7 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(user);
         localStorage.setItem("kala_current_user", JSON.stringify(user));
         setClicksLog([]);
+        setSellerItems([]);
         return true;
       }
       return false;
@@ -208,6 +232,9 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const updatedUser = await res.json();
         setCurrentUser(updatedUser);
         localStorage.setItem("kala_current_user", JSON.stringify(updatedUser));
+        if (updatedUser.username) {
+          fetchSellerItems(updatedUser.username);
+        }
         return true;
       }
       return false;
@@ -233,6 +260,9 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         await fetchItems();
         await fetchSellerSummary(currentUser.id);
+        if (currentUser.username) {
+          await fetchSellerItems(currentUser.username);
+        }
       }
     } catch (e) {
       console.error("Add item request failed:", e);
@@ -251,6 +281,9 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchItems();
         if (currentUser) {
           await fetchSellerSummary(currentUser.id);
+          if (currentUser.username) {
+            await fetchSellerItems(currentUser.username);
+          }
         }
       }
     } catch (e) {
@@ -268,6 +301,9 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchItems();
         if (currentUser) {
           await fetchSellerSummary(currentUser.id);
+          if (currentUser.username) {
+            await fetchSellerItems(currentUser.username);
+          }
         }
       }
     } catch (e) {
@@ -293,6 +329,9 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (currentUser) {
           await fetchSellerSummary(currentUser.id);
+          if (currentUser.username) {
+            await fetchSellerItems(currentUser.username);
+          }
         }
       }
     } catch (e) {
@@ -304,6 +343,7 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <KalaContext.Provider
       value={{
         items,
+        sellerItems,
         currentUser,
         users,
         clicksLog,

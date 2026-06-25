@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export default function SellerDashboardPage() {
-  const { currentUser, items, clicksLog, addItem, updateItem, deleteItem } = useKala();
+  const { currentUser, sellerItems, clicksLog, addItem, updateItem, deleteItem } = useKala();
   const router = useRouter();
 
   // Onboarding guard: Redirect if user not logged in
@@ -243,10 +243,7 @@ export default function SellerDashboardPage() {
     resetForm();
   };
 
-  // Filter items/analytics data for current seller
-  const sellerItems = items.filter(
-    (item) => item.sellerUsername === currentUser?.username
-  );
+  // sellerItems is retrieved directly from KalaContext to include sold & archived items
 
   const activeListingsCount = sellerItems.filter((item) => !item.isSold && !item.isArchived).length;
   const soldOrArchivedCount = sellerItems.filter((item) => item.isSold || item.isArchived).length;
@@ -503,15 +500,17 @@ export default function SellerDashboardPage() {
                           <span className="text-[9px] font-semibold bg-white border border-[#cacacb] text-black px-1.5 py-0.5 rounded-sm">
                             {formatIDR(item.price)}
                           </span>
-                          {item.isSold ? (
+                          {item.isSold && (
                             <span className="bg-[#d30005]/10 text-[#d30005] border border-[#d30005]/20 text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
                               Sold Out
                             </span>
-                          ) : item.isArchived ? (
+                          )}
+                          {item.isArchived && (
                             <span className="bg-zinc-200 text-zinc-600 border border-zinc-300 text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
                               Archived
                             </span>
-                          ) : (
+                          )}
+                          {!item.isSold && !item.isArchived && (
                             <span className="bg-[#007d48]/10 text-[#007d48] border border-[#007d48]/20 text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
                               Active
                             </span>
@@ -551,6 +550,22 @@ export default function SellerDashboardPage() {
                           className="text-xs font-bold bg-white border border-[#cacacb] hover:bg-[#f5f5f5] text-[#707072] px-3.5 py-1.5 rounded-none"
                         >
                           Re-list
+                        </button>
+                      )}
+
+                      {item.isArchived ? (
+                        <button
+                          onClick={() => updateItem(item.id, { isArchived: false })}
+                          className="text-xs font-bold bg-white border border-black hover:bg-[#f5f5f5] text-black px-3.5 py-1.5 rounded-none"
+                        >
+                          Unarchive
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => updateItem(item.id, { isArchived: true })}
+                          className="text-xs font-bold bg-white border border-[#cacacb] hover:bg-[#f5f5f5] text-[#707072] px-3.5 py-1.5 rounded-none"
+                        >
+                          Archive
                         </button>
                       )}
 

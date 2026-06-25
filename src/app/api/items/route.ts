@@ -15,18 +15,22 @@ export async function GET(request: Request) {
     const shopeeOnly = searchParams.get("shopeeOnly") === "true";
     const tokopediaOnly = searchParams.get("tokopediaOnly") === "true";
     const sellerUsername = searchParams.get("sellerUsername") || "";
+    const includeArchived = searchParams.get("includeArchived") === "true";
 
     const filters: any[] = [];
 
-    // Filter out archived items
-    filters.push(eq(items.isArchived, false));
+    // Filter out archived items unless explicitly requested (e.g. dashboard)
+    if (!includeArchived) {
+      filters.push(eq(items.isArchived, false));
+    }
 
     // Handle sellerUsername filter
     if (sellerUsername) {
       filters.push(eq(users.username, sellerUsername.toLowerCase()));
     } else {
-      // General catalog hides sold items
+      // General catalog hides sold and archived items
       filters.push(eq(items.isSold, false));
+      filters.push(eq(items.isArchived, false));
     }
 
     // Category filter
