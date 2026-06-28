@@ -121,7 +121,7 @@ Direct consumer communication via social media Direct Messages (DMs) introduces 
 *   **Frontend Application Layer:** **Next.js (Version 14+ with App Router)** using TypeScript. Leverages Server-Side Rendering (SSR) for static marketplace/listing catalog compilation to optimize search visibility, and client-side react states for filter mutations.
 *   **Styling Engine:** **Tailwind CSS** combined with an accessible component primitives utility library (e.g., Radix UI or shadcn/ui) for fully responsive, mobile-first design blocks.
 *   **Backend & API Framework:** **Next.js Route Handlers** (Serverless API functions) or a standalone **Node.js (NestJS)** environment running TypeScript to manage underlying validation, routing, and analytics data collation.
-*   **Database Management System:** **PostgreSQL** relational database. Database schema interactions, migrations, and structural state mapping are maintained via **Drizzle ORM** or **Prisma ORM** for high efficiency.
+*   **Database Management System:** **PostgreSQL** relational database. Database schema interactions, migrations, and structural state mapping are maintained via **Drizzle ORM** or **Drizzle ORM** for high efficiency.
 *   **Object & Media Storage:** **Cloudinary** or **AWS S3** with an integrated Content Delivery Network (CloudFront) to intercept, resize, optimize, and serve user uploaded images at edge locations.
 *   **Session & Security Authentication:** **NextAuth.js** configured with local JWT storage strategies for manual credit validation, and standard OAuth 2.0 adapters for the Google Login provider.
 
@@ -154,7 +154,9 @@ Direct consumer communication via social media Direct Messages (DMs) introduces 
 
 #### 1. Adaptive Navigation Topbar (Sticky Header)
 *   **Left Section:** Prominent minimalist typographic brand logo "**Kala.**" paired adjacent to a wide responsive search input block containing an interior inline magnifying glass vector asset.
-*   **Right Section:** Contextual visibility module. If Guest mode $ightarrow$ display a clean text-link button "Masuk" and an accented layout button "Daftar". If Logged-In status $ightarrow$ display an emerald-shaded action button labelled "+ Jual Barang" alongside a circular avatar user profile component featuring a secondary click dropdown menu container.
+*   **Right Section:** Contextual visibility module. If Guest mode $
+ightarrow$ display a clean text-link button "Masuk" and an accented layout button "Daftar". If Logged-In status $
+ightarrow$ display an emerald-shaded action button labelled "+ Jual Barang" alongside a circular avatar user profile component featuring a secondary click dropdown menu container.
 
 #### 2. Specialized Non-Bargaining Product detail Grid Matrix
 *   **Left Column (60% Desktop Width Grid Block):** Interlocking image stack gallery container. Prominently renders the high-resolution primary photo upload with an asset carousel grid rendering supporting thumbnail variants below. Below the graphic zone, a spacious structured card presents the item text description blocks inside neutral tinted typography settings.
@@ -176,5 +178,6 @@ To evaluate the operational validation, market fit, and performance trajectory o
 *   **Seller Acquisition Rate:** The total volume metric of newly onboarded, fully registered Indonesian sellers who successfully create a profile handle and upload at least one valid preloved product listing within their initial 72 hours.
 *   **Inventory Depth Metrics:** The running mean average of live active item listings maintained across active verified seller dashboards over a rolling 30-day monitoring window.
 *   **Intent Outbound Conversion Efficiency (Redirect CTR):** Calculated continuously using the mathematical conversion format:
-$$	ext{CTR}_{	ext{Outbound}} = \left( rac{	ext{Total Click Events Triggered on Shopee \& Tokopedia Action Buttons}}{	ext{Total Aggregate Unique Product Detail Page (PDP) Views}} ight) 	imes 100$$
+$$	ext{CTR}_{	ext{Outbound}} = \left( rac{	ext{Total Click Events Triggered on Shopee \& Tokopedia Action Buttons}}{	ext{Total Aggregate Unique Product Detail Page (PDP) Views}} 
+ight) 	imes 100$$
 *   **Seller Retention Metric:** The percentage proportion of registered sellers who log back into their personal dashboard workspace to add an item, edit existing parameters, or change a listing tag to "Sold Out" at least twice within a 30-day operational lifecycle window.
