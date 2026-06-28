@@ -23,6 +23,8 @@ export default function UserStorefrontPage({ params }: StorefrontProps) {
   const [sellerAvatar, setSellerAvatar] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCopied, setIsCopied] = useState(false);
+  const [dbItems, setDbItems] = useState<PrelovedItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Find seller name
@@ -37,6 +39,31 @@ export default function UserStorefrontPage({ params }: StorefrontProps) {
     }
   }, [users, username]);
 
+  useEffect(() => {
+    let active = true;
+    const fetchStorefrontItems = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch(`/api/items?sellerUsername=${username}`);
+        if (res.ok && active) {
+          const data = await res.json();
+          setDbItems(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch storefront items:", error);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchStorefrontItems();
+    return () => {
+      active = false;
+    };
+  }, [username, items]);
+
   // Copy storefront link
   const handleCopyStoreLink = () => {
     if (typeof window !== "undefined") {
@@ -46,14 +73,8 @@ export default function UserStorefrontPage({ params }: StorefrontProps) {
     }
   };
 
-  // Filter items for this seller only
-  const sellerItems = items.filter((item) => {
-    // Exclude archived items
-    if (item.isArchived) return false;
-    
-    // Match username
-    if (item.sellerUsername.toLowerCase() !== username.toLowerCase()) return false;
-
+  // Filter items for this seller only based on search query
+  const sellerItems = dbItems.filter((item) => {
     // Search query match
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -67,8 +88,8 @@ export default function UserStorefrontPage({ params }: StorefrontProps) {
   });
 
   // Calculate stats
-  const activeCount = sellerItems.filter((i) => !i.isSold).length;
-  const soldCount = sellerItems.filter((i) => i.isSold).length;
+  const activeCount = dbItems.filter((i) => !i.isSold).length;
+  const soldCount = dbItems.filter((i) => i.isSold).length;
 
   const formatIDR = (num: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -158,7 +179,18 @@ export default function UserStorefrontPage({ params }: StorefrontProps) {
         </div>
 
         {/* Seller product grid */}
-        {sellerItems.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex flex-col h-full bg-white border border-[#cacacb]/50 p-4">
+                <div className="w-full aspect-square bg-zinc-200 mb-4" />
+                <div className="h-4 bg-zinc-200 w-3/4 mb-2" />
+                <div className="h-3 bg-zinc-200 w-1/2 mb-4" />
+                <div className="h-4 bg-zinc-200 w-1/3 mt-auto" />
+              </div>
+            ))}
+          </div>
+        ) : sellerItems.length === 0 ? (
           <div className="w-full text-center py-20 border border-dashed border-[#cacacb] bg-[#f5f5f5]">
             <ShoppingBag className="w-10 h-10 mx-auto text-[#9e9ea0] mb-3" />
             <p className="text-sm font-bold text-[#111111] uppercase tracking-wide">Belum ada barang</p>

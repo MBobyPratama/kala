@@ -32,6 +32,23 @@ export default function ProductDetailPage({ params }: PDPProps) {
       if (matched.imageUrls && matched.imageUrls.length > 0) {
         setSelectedImage(matched.imageUrls[0]);
       }
+    } else {
+      // Fetch item directly from API if not found in global items (e.g. if it is sold or archived)
+      const fetchItemDetails = async () => {
+        try {
+          const res = await fetch(`/api/items/${itemId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setItem(data);
+            if (data.imageUrls && data.imageUrls.length > 0) {
+              setSelectedImage(data.imageUrls[0]);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch item details:", error);
+        }
+      };
+      fetchItemDetails();
     }
   }, [items, itemId]);
 
@@ -115,13 +132,20 @@ export default function ProductDetailPage({ params }: PDPProps) {
             
             {/* Gallery Image Display */}
             <div className="flex flex-col gap-4">
-              <div className="w-full aspect-square bg-[#f5f5f5] overflow-hidden border border-[#e5e5e5]">
+              <div className="w-full aspect-square bg-[#f5f5f5] overflow-hidden border border-[#e5e5e5] relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={selectedImage}
                   alt={item.name}
                   className="w-full h-full object-cover"
                 />
+                {item.isSold && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+                    <span className="bg-white border-2 border-black text-black font-display text-lg tracking-widest uppercase px-6 py-2 rotate-[-5deg] select-none">
+                      SOLD OUT
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Thumbnails grid */}
@@ -205,7 +229,7 @@ export default function ProductDetailPage({ params }: PDPProps) {
               {/* Price displays */}
               <div className="py-4 border-y border-[#e5e5e5] my-4 flex items-center justify-between">
                 <div>
-                  <span className="text-2xl sm:text-3xl font-display tracking-tight text-[#111111]">
+                  <span className={`text-2xl sm:text-3xl font-display tracking-tight ${item.isSold ? "text-[#707072] line-through" : "text-[#111111]"}`}>
                     {formatIDR(item.price)}
                   </span>
                   <span className="text-[10px] font-semibold text-[#707072] block mt-0.5 uppercase tracking-wider">
@@ -213,55 +237,64 @@ export default function ProductDetailPage({ params }: PDPProps) {
                   </span>
                 </div>
                 <div className="bg-black text-white text-[9px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-none">
-                  Fixed Price
+                  {item.isSold ? "SOLD OUT" : "Fixed Price"}
                 </div>
               </div>
             </div>
 
             {/* Outbound Routers */}
             <div className="flex flex-col gap-3">
-              <span className="text-xs font-bold text-[#111111] uppercase tracking-wider block mb-1">
-                Beli Sekarang Lewat Marketplace:
-              </span>
-
-              {item.shopeeUrl ? (
-                <button
-                  onClick={() => handleOutboundRedirect("Shopee", item.shopeeUrl!)}
-                  className="w-full bg-[#EE4D2D] hover:bg-[#d63d1e] text-white font-bold text-sm h-12 rounded-full transition-all flex items-center justify-center gap-3 group"
-                >
-                  <ShoppingBag className="w-4 h-4 text-white" />
-                  <span>Beli via Shopee</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-sm font-semibold opacity-85 group-hover:opacity-100">
-                    Aman & COD
-                  </span>
-                </button>
+              {item.isSold ? (
+                <div className="w-full bg-[#f5f5f5] border border-[#cacacb] text-[#707072] font-bold text-sm h-12 rounded-full flex items-center justify-center gap-2 select-none">
+                  <ShoppingBag className="w-4 h-4 text-[#9e9ea0]" />
+                  <span>BARANG SUDAH TERJUAL (SOLD OUT)</span>
+                </div>
               ) : (
-                <button
-                  disabled
-                  className="w-full bg-[#f5f5f5] text-[#9e9ea0] border border-[#cacacb] font-bold text-sm h-12 rounded-full cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  <span>Shopee Belum Tersedia</span>
-                </button>
-              )}
-
-              {item.tokopediaUrl ? (
-                <button
-                  onClick={() => handleOutboundRedirect("Tokopedia", item.tokopediaUrl!)}
-                  className="w-full bg-[#03AC0E] hover:bg-[#028b0b] text-white font-bold text-sm h-12 rounded-full transition-all flex items-center justify-center gap-3 group"
-                >
-                  <ShoppingBag className="w-4 h-4 text-white" />
-                  <span>Beli via Tokopedia</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-sm font-semibold opacity-85 group-hover:opacity-100">
-                    Cicilan 0%
+                <>
+                  <span className="text-xs font-bold text-[#111111] uppercase tracking-wider block mb-1">
+                    Beli Sekarang Lewat Marketplace:
                   </span>
-                </button>
-              ) : (
-                <button
-                  disabled
-                  className="w-full bg-[#f5f5f5] text-[#9e9ea0] border border-[#cacacb] font-bold text-sm h-12 rounded-full cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  <span>Tokopedia Belum Tersedia</span>
-                </button>
+
+                  {item.shopeeUrl ? (
+                    <button
+                      onClick={() => handleOutboundRedirect("Shopee", item.shopeeUrl!)}
+                      className="w-full bg-[#EE4D2D] hover:bg-[#d63d1e] text-white font-bold text-sm h-12 rounded-full transition-all flex items-center justify-center gap-3 group"
+                    >
+                      <ShoppingBag className="w-4 h-4 text-white" />
+                      <span>Beli via Shopee</span>
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-sm font-semibold opacity-85 group-hover:opacity-100">
+                        Aman & COD
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full bg-[#f5f5f5] text-[#9e9ea0] border border-[#cacacb] font-bold text-sm h-12 rounded-full cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <span>Shopee Belum Tersedia</span>
+                    </button>
+                  )}
+
+                  {item.tokopediaUrl ? (
+                    <button
+                      onClick={() => handleOutboundRedirect("Tokopedia", item.tokopediaUrl!)}
+                      className="w-full bg-[#03AC0E] hover:bg-[#028b0b] text-white font-bold text-sm h-12 rounded-full transition-all flex items-center justify-center gap-3 group"
+                    >
+                      <ShoppingBag className="w-4 h-4 text-white" />
+                      <span>Beli via Tokopedia</span>
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-sm font-semibold opacity-85 group-hover:opacity-100">
+                        Cicilan 0%
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full bg-[#f5f5f5] text-[#9e9ea0] border border-[#cacacb] font-bold text-sm h-12 rounded-full cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <span>Tokopedia Belum Tersedia</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
