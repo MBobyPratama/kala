@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, User, LogOut, LayoutDashboard, Plus, Store, Check } from "lucide-react";
 import { useKala } from "@/app/context/KalaContext";
+import { useClerk } from "@clerk/nextjs";
 
 interface HeaderProps {
   onSearchChange?: (val: string) => void;
@@ -13,6 +14,7 @@ interface HeaderProps {
 
 function HeaderInner({ onSearchChange, searchValue = "" }: HeaderProps) {
   const { currentUser, login, loginWithGoogle, logout, register, claimUsername } = useKala();
+  const { openSignIn, openSignUp } = useClerk();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -124,7 +126,7 @@ function HeaderInner({ onSearchChange, searchValue = "" }: HeaderProps) {
               <span className="text-[#111111] font-semibold">Halo, {currentUser.name}</span>
             ) : (
               <span 
-                onClick={() => { setAuthMode("login"); setIsAuthOpen(true); }}
+                onClick={() => openSignIn()}
                 className="text-[#707072] cursor-pointer hover:text-black"
               >
                 Gabung Kala Hub
@@ -227,19 +229,13 @@ function HeaderInner({ onSearchChange, searchValue = "" }: HeaderProps) {
             ) : (
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => {
-                    setAuthMode("login");
-                    setIsAuthOpen(true);
-                  }}
+                  onClick={() => openSignIn()}
                   className="font-medium text-sm text-[#111111] px-3 py-2 hover:underline decoration-1"
                 >
                   Masuk
                 </button>
                 <button
-                  onClick={() => {
-                    setAuthMode("register");
-                    setIsAuthOpen(true);
-                  }}
+                  onClick={() => openSignUp()}
                   className="bg-[#111111] text-white font-medium text-sm h-10 px-5 rounded-full hover:bg-black transition-all"
                 >
                   Daftar
