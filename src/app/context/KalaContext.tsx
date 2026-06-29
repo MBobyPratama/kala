@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useUser, useAuth } from "@clerk/nextjs";
 
 export type Category =
   | "Fashion & Accessories"
@@ -94,6 +95,10 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [clicksLog, setClicksLog] = useState<ClickEvent[]>([]);
 
+  // Clerk authentication state
+  const { user: clerkUser, isLoaded: clerkUserLoaded } = useUser();
+  const { signOut: clerkSignOut, isSignedIn } = useAuth();
+
   // 1. Fetch items from SQLite backend API Route on startup
   const fetchItems = async () => {
     try {
@@ -133,89 +138,55 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Fetch items on start
   useEffect(() => {
     fetchItems();
-    
-    // Restore session
-    const savedCurrentUser = localStorage.getItem("kala_current_user");
-    if (savedCurrentUser) {
-      const parsedUser = JSON.parse(savedCurrentUser);
-      setCurrentUser(parsedUser);
-      fetchSellerSummary(parsedUser.id);
-      if (parsedUser.username) {
-        fetchSellerItems(parsedUser.username);
-      }
-    }
   }, []);
 
-  const login = async (email: string): Promise<boolean> => {
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      if (res.ok) {
-        const user = await res.json();
-        setCurrentUser(user);
-        localStorage.setItem("kala_current_user", JSON.stringify(user));
-        fetchSellerSummary(user.id);
-        if (user.username) {
-          fetchSellerItems(user.username);
+  // Sync Clerk authentication state with our database
+  useEffect(() => {
+    const syncUser = async () => {
+      if (clerkUserLoaded && isSignedIn && clerkUser) {
+        try {
+          const res = await fetch("/api/auth/sync", { method: "POST" });
+          if (res.ok) {
+            const dbUser = await res.json();
+            setCurrentUser(dbUser);
+            fetchSellerSummary(dbUser.id);
+            if (dbUser.username) {
+              fetchSellerItems(dbUser.username);
+            }
+          }
+        } catch (e) {
+          console.error("Clerk user sync failed:", e);
         }
-        return true;
+      } else if (clerkUserLoaded && !isSignedIn) {
+        setCurrentUser(null);
+        setClicksLog([]);
+        setSellerItems([]);
       }
-      return false;
-    } catch (e) {
-      console.error("Login request failed:", e);
-      return false;
-    }
+    };
+
+    syncUser();
+  }, [clerkUser, clerkUserLoaded, isSignedIn]);
+
+  // Legacy local auth functions made compatible with Clerk (unused but kept for API safety)
+  const login = async (email: string): Promise<boolean> => {
+    console.warn("Local login is deprecated. Please use Clerk.");
+    return false;
   };
 
   const loginWithGoogle = async () => {
-    try {
-      const res = await fetch("/api/auth/google", { method: "POST" });
-      if (res.ok) {
-        const user = await res.json();
-        setCurrentUser(user);
-        localStorage.setItem("kala_current_user", JSON.stringify(user));
-        setClicksLog([]);
-        setSellerItems([]);
-      }
-    } catch (e) {
-      console.error("Google login mock failed:", e);
-    }
+    console.warn("Local loginWithGoogle is deprecated. Please use Clerk.");
   };
 
   const logout = () => {
-    setCurrentUser(null);
-    setClicksLog([]);
-    setSellerItems([]);
-    localStorage.removeItem("kala_current_user");
+    clerkSignOut();
   };
 
   const register = async (email: string, name: string): Promise<boolean> => {
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name }),
-      });
-
-      if (res.ok) {
-        const user = await res.json();
-        setCurrentUser(user);
-        localStorage.setItem("kala_current_user", JSON.stringify(user));
-        setClicksLog([]);
-        setSellerItems([]);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      console.error("Registration request failed:", e);
-      return false;
-    }
+    console.warn("Local register is deprecated. Please use Clerk.");
+    return false;
   };
 
   const claimUsername = async (username: string): Promise<boolean> => {
@@ -231,7 +202,6 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const updatedUser = await res.json();
         setCurrentUser(updatedUser);
-        localStorage.setItem("kala_current_user", JSON.stringify(updatedUser));
         if (updatedUser.username) {
           fetchSellerItems(updatedUser.username);
         }
@@ -243,6 +213,7 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
   };
+
 
   const addItem = async (itemDetails: Omit<PrelovedItem, "id" | "sellerUsername" | "sellerName" | "isSold" | "isArchived" | "createdAt" | "clicksCount">) => {
     if (!currentUser) return;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Anton } from "next/font/google";
 import "./globals.css";
 import { KalaProvider } from "@/app/context/KalaContext";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,15 +26,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${anton.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-white text-[#111111] selection:bg-[#111111] selection:text-white">
-        <KalaProvider>
-          {children}
-        </KalaProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="en"
+        className={`${inter.variable} ${anton.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col bg-white text-[#111111] selection:bg-[#111111] selection:text-white">
+          <KalaProvider>
+            {children}
+          </KalaProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
+

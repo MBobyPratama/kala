@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useKala, PrelovedItem, Category, Condition } from "@/app/context/KalaContext";
+import { useClerk } from "@clerk/nextjs";
 import {
   TrendingUp,
   Package,
@@ -24,6 +25,7 @@ import {
 
 export default function SellerDashboardPage() {
   const { currentUser, sellerItems, clicksLog, addItem, updateItem, deleteItem } = useKala();
+  const { openSignIn } = useClerk();
   const router = useRouter();
 
   // Onboarding guard: Redirect if user not logged in
@@ -307,17 +309,11 @@ export default function SellerDashboardPage() {
             </p>
             <button
               onClick={() => {
-                // Trigger the auth modal by forcing an action event or simulating
-                const event = new CustomEvent("open-auth-modal");
-                window.dispatchEvent(event);
-                
-                // Let's print instructions or use our login trigger from header
-                // Note that header auth triggers on the same page.
-                // We'll let the user click "Masuk" in the top bar.
+                openSignIn();
               }}
               className="w-full bg-[#111111] text-white font-bold text-xs h-11 rounded-full hover:bg-black transition-all uppercase tracking-wider"
             >
-              Gunakan Menu "Masuk" Di Atas
+              Masuk Sekarang
             </button>
           </div>
         </main>
