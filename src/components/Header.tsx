@@ -201,6 +201,14 @@ function HeaderInner({ onSearchChange, searchValue = "" }: HeaderProps) {
                         <LayoutDashboard className="w-4 h-4 text-[#707072]" />
                         <span>Dashboard Saya</span>
                       </Link>
+                      <Link
+                        href="/dashboard?editProfile=true"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-[#111111] hover:bg-[#f5f5f5] transition-all"
+                      >
+                        <User className="w-4 h-4 text-[#707072]" />
+                        <span>Edit Profil</span>
+                      </Link>
                       {currentUser.username && (
                         <Link
                           href={`/${currentUser.username}`}

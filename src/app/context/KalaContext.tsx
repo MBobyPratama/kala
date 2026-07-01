@@ -62,6 +62,7 @@ interface KalaContextType {
   logout: () => void;
   register: (email: string, name: string) => Promise<boolean>;
   claimUsername: (username: string) => Promise<boolean>;
+  updateProfile: (username?: string, avatar?: string) => Promise<{ success: boolean; error?: string }>;
   addItem: (item: Omit<PrelovedItem, "id" | "sellerUsername" | "sellerName" | "isSold" | "isArchived" | "createdAt" | "clicksCount">) => Promise<void>;
   updateItem: (id: string, updates: Partial<PrelovedItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
@@ -203,14 +204,43 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const updatedUser = await res.json();
         setCurrentUser(updatedUser);
         if (updatedUser.username) {
-          fetchSellerItems(updatedUser.username);
+          await fetchSellerItems(updatedUser.username);
         }
+        await fetchItems();
         return true;
       }
       return false;
     } catch (e) {
       console.error("Claim username request failed:", e);
       return false;
+    }
+  };
+
+  const updateProfile = async (username?: string, avatar?: string): Promise<{ success: boolean; error?: string }> => {
+    if (!currentUser) return { success: false, error: "User tidak ditemukan" };
+
+    try {
+      const res = await fetch("/api/user/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUser.id, username, avatar }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setCurrentUser(data);
+        if (data.username) {
+          await fetchSellerItems(data.username);
+        }
+        await fetchItems();
+        return { success: true };
+      } else {
+        return { success: false, error: data.error || "Gagal memperbarui profil" };
+      }
+    } catch (e) {
+      console.error("Update profile request failed:", e);
+      return { success: false, error: "Terjadi kesalahan pada server" };
     }
   };
 
@@ -323,6 +353,7 @@ export const KalaProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         register,
         claimUsername,
+        updateProfile,
         addItem,
         updateItem,
         deleteItem,
