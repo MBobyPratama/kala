@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -20,18 +20,95 @@ import {
   FileText,
   AlertCircle,
   Globe,
-  Upload
+  Upload,
+  User
 } from "lucide-react";
 
-export default function SellerDashboardPage() {
-  const { currentUser, sellerItems, clicksLog, addItem, updateItem, deleteItem } = useKala();
+function DashboardContent() {
+  const { currentUser, sellerItems, clicksLog, addItem, updateItem, deleteItem, updateProfile } = useKala();
   const { openSignIn } = useClerk();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Onboarding guard: Redirect if user not logged in
   useEffect(() => {
     // If user is not logged in after first render, we show a clean sign-in screen on dashboard
   }, [currentUser]);
+
+  // Sync profile editing states with current user data
+  useEffect(() => {
+    if (currentUser) {
+      setProfileUsername(currentUser.username || "");
+      setProfileAvatar(currentUser.avatar || "");
+    }
+  }, [currentUser]);
+
+  // Handle URL query parameter ?editProfile=true to trigger edit profile modal
+  useEffect(() => {
+    if (searchParams.get("editProfile") === "true") {
+      setIsProfileEditOpen(true);
+      // Clean up URL search params so refresh/closing doesn't trigger modal again
+      const params = new URLSearchParams(window.location.search);
+      params.delete("editProfile");
+      const newRelativePathQuery = window.location.pathname + (params.toString() ? "?" + params.toString() : "");
+      window.history.replaceState(null, "", newRelativePathQuery);
+    }
+  }, [searchParams]);
+
+  // Handle local avatar file reader
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    setProfileError("");
+
+    // Size limits (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileError("Ukuran file tidak boleh melebihi 5MB.");
+      return;
+    }
+
+    // Type checks
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setProfileError("Format file tidak valid (Gunakan JPEG, PNG, atau WEBP).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setProfileAvatar(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Submit profile edit
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileError("");
+    setIsSavingProfile(true);
+
+    const cleanUsername = profileUsername.trim().toLowerCase();
+    const isValid = /^[a-z0-9_-]+$/.test(cleanUsername);
+
+    if (!isValid) {
+      setProfileError("Username hanya boleh huruf kecil, angka, - dan _");
+      setIsSavingProfile(false);
+      return;
+    }
+
+    const { success, error } = await updateProfile(cleanUsername, profileAvatar);
+
+    if (success) {
+      setIsProfileEditOpen(false);
+    } else {
+      setProfileError(error || "Gagal memperbarui profil.");
+    }
+    setIsSavingProfile(false);
+  };
 
   // Chart time range toggle: 7 Days, 30 Days, All-Time
   const [timeRange, setTimeRange] = useState<"7days" | "30days" | "all">("7days");
@@ -51,6 +128,13 @@ export default function SellerDashboardPage() {
   const [tokopediaUrl, setTokopediaUrl] = useState("");
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
+
+  // Profile Edit Modal States
+  const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
+  const [profileUsername, setProfileUsername] = useState("");
+  const [profileAvatar, setProfileAvatar] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Categories & Conditions lists
   const CATEGORIES: Category[] = [
@@ -340,13 +424,23 @@ export default function SellerDashboardPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => { resetForm(); setIsFormOpen(true); }}
-            className="bg-[#007d48] text-white hover:bg-[#00653a] font-bold text-xs h-11 px-6 rounded-full transition-all flex items-center justify-center gap-2.5 uppercase tracking-wider"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Item Preloved Baru</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setIsProfileEditOpen(true)}
+              className="bg-white border border-[#cacacb] text-[#111111] hover:bg-[#f5f5f5] font-bold text-xs h-11 px-6 rounded-full transition-all flex items-center justify-center gap-2 uppercase tracking-wider"
+            >
+              <User className="w-4 h-4 text-[#111111]" />
+              <span>Edit Profil</span>
+            </button>
+
+            <button
+              onClick={() => { resetForm(); setIsFormOpen(true); }}
+              className="bg-[#007d48] text-white hover:bg-[#00653a] font-bold text-xs h-11 px-6 rounded-full transition-all flex items-center justify-center gap-2.5 uppercase tracking-wider"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Item Preloved Baru</span>
+            </button>
+          </div>
         </section>
 
         {/* METRIC CARDS ROW (PRD Section 3.2.2 Metric Cards) */}
@@ -829,6 +923,128 @@ export default function SellerDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Profile Edit Modal */}
+      {isProfileEditOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white border border-[#cacacb] p-8 relative flex flex-col">
+            <button
+              onClick={() => setIsProfileEditOpen(false)}
+              className="absolute top-4 right-4 text-xl font-light hover:text-[#707072] border border-[#cacacb] w-8 h-8 rounded-full flex items-center justify-center bg-[#f5f5f5]"
+            >
+              ✕
+            </button>
+
+            <div className="mb-6">
+              <h3 className="font-sans font-bold text-lg uppercase tracking-wider text-[#111111]">
+                Edit Profil Penjual
+              </h3>
+              <p className="text-xs text-[#707072] mt-1 font-semibold">
+                Ubah informasi handle toko dan foto profil Anda.
+              </p>
+            </div>
+
+            {profileError && (
+              <div className="p-3 bg-[#fdf2f2] text-[#d30005] border border-[#fde8e8] text-xs font-semibold mb-6 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{profileError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="flex flex-col">
+              {/* Profile Photo selector */}
+              <div className="flex flex-col items-center gap-4 mb-6">
+                <div className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={profileAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"}
+                    alt="Profile Avatar"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-[#cacacb]"
+                  />
+                  <label className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-all">
+                    <Upload className="w-6 h-6 text-white" />
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleAvatarFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <label className="cursor-pointer text-xs font-bold bg-[#f5f5f5] hover:bg-[#cacacb] border border-[#cacacb] px-4 py-2 rounded-full transition-all uppercase tracking-wider">
+                  Ubah Foto Profil
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleAvatarFileChange}
+                    className="hidden"
+                  />
+                </label>
+                <span className="text-[9px] text-[#707072]">JPEG, PNG, WEBP (Maksimal 5MB)</span>
+              </div>
+
+              {/* Username Input */}
+              <div className="flex flex-col gap-1.5 mb-6">
+                <label htmlFor="profile-username" className="text-[10px] font-bold text-[#111111] uppercase tracking-wider">
+                  Username Handle Toko
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 text-[#707072] text-sm font-semibold">kala.id/</span>
+                  <input
+                    id="profile-username"
+                    type="text"
+                    required
+                    value={profileUsername}
+                    onChange={(e) => setProfileUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                    placeholder="siti_thrift"
+                    className="w-full h-11 pl-[64px] pr-4 border border-[#cacacb] text-sm focus:outline-none focus:border-black rounded-none font-semibold text-black"
+                  />
+                </div>
+                <span className="text-[9px] text-[#707072] mt-0.5 leading-relaxed">
+                  Hanya gunakan huruf kecil, angka, tanda hubung (-) atau underscore (_). Username ini adalah alamat toko publik Anda.
+                </span>
+              </div>
+
+              {/* Save/Cancel Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#e5e5e5]">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileEditOpen(false)}
+                  className="bg-[#f5f5f5] hover:bg-[#cacacb] text-black font-bold text-xs h-11 px-6 rounded-full transition-all uppercase tracking-wider"
+                  disabled={isSavingProfile}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#111111] hover:bg-black text-white font-bold text-xs h-11 px-8 rounded-full transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                  disabled={isSavingProfile}
+                >
+                  {isSavingProfile ? "Menyimpan..." : "Simpan Profil"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
+  );
+}
+
+export default function SellerDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="sticky top-0 z-40 w-full bg-white border-b border-[#e5e5e5] h-16 flex items-center justify-between px-4 sm:px-8">
+          <span className="font-display text-2xl tracking-tighter text-[#111111]">KALA.</span>
+          <div className="w-16 h-8 bg-[#f5f5f5] rounded-full animate-pulse" />
+        </div>
+        <div className="flex-1 flex items-center justify-center text-xs font-bold text-[#707072] uppercase tracking-widest bg-[#f5f5f5]">
+          Memuat Dashboard Penjual...
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
